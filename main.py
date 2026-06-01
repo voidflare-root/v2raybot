@@ -1,35 +1,11 @@
-import os
-import base64
-import json
-import requests
-import asyncio
-import time
-import re
-import html
-import urllib.parse
-
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    CopyTextButton,
-    ReplyKeyboardMarkup,
-)
-
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    CallbackQueryHandler,
-    ContextTypes,
-    MessageHandler,
-    filters,
-)
-
+import os, base64, json, requests, asyncio, time, re, html, urllib.parse
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 from telegram.constants import ParseMode
 
 TOKEN = os.getenv("BOT_TOKEN", "BOT_TOKEN_HERE")
 
-CHANNEL_ID = "@ABOUTM3TG"
+CHANNEL_ID = "@PIYUSHxTG"
 CHANNEL_LINK = "https://t.me/ABOUTM3TG"
 OWNER_ID = 6493515932
 OWNER_USERNAME = "PIYUSHxTG"
@@ -84,7 +60,7 @@ def load_restricted():
     try:
         with open(RESTRICT_FILE, "r") as f:
             return set(json.load(f))
-    except Exception:
+    except:
         return set()
 
 
@@ -100,46 +76,38 @@ def is_admin(user_id):
     return user_id in ADMINS
 
 
-def reply_menu_keyboard():
+def main_menu():
     return ReplyKeyboardMarkup(
         [
             ["◇ VMESS", "◆ VLESS"],
             ["◈ TROJAN", "◉ SS"],
-            ["🌍 ALL", "ℹ️ ABOUT"],
-            ["⚙️ ADMIN", "🔄 START"],
+            ["ℹ️ ABOUT", "⚙️ ADMIN"],
+            ["🔄 START"]
         ],
-        resize_keyboard=True,
-        one_time_keyboard=False,
+        resize_keyboard=True
     )
 
 
-def main_menu_keyboard():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("◇ VMESS", callback_data="TYPE_VMESS")],
-        [InlineKeyboardButton("◆ VLESS", callback_data="TYPE_VLESS")],
-        [InlineKeyboardButton("◈ TROJAN", callback_data="TYPE_TROJAN")],
-        [InlineKeyboardButton("◉ SHADOWSOCKS", callback_data="TYPE_SS")],
-        [InlineKeyboardButton("ℹ️ ABOUT", callback_data="ABOUT")],
-        [InlineKeyboardButton("⚙️ ADMIN PANEL", callback_data="ADMIN_PANEL")],
-    ])
+def region_menu():
+    return ReplyKeyboardMarkup(
+        [
+            ["🇮🇳 IN", "🇺🇸 US", "🇬🇧 GB"],
+            ["🇩🇪 DE", "🇸🇬 SG", "🇯🇵 JP"],
+            ["🇨🇦 CA", "🇳🇱 NL", "🇫🇷 FR"],
+            ["🌍 ALL", "🔙 BACK"]
+        ],
+        resize_keyboard=True
+    )
 
 
-def country_keyboard():
-    rows = []
-    row = []
-
-    for code, info in COUNTRY_KEYWORDS.items():
-        row.append(InlineKeyboardButton(f"{info['flag']} {code}", callback_data=f"COUNTRY_{code}"))
-        if len(row) == 3:
-            rows.append(row)
-            row = []
-
-    if row:
-        rows.append(row)
-
-    rows.append([InlineKeyboardButton("🌍 ALL ACCOUNTS", callback_data="COUNTRY_ALL")])
-    rows.append([InlineKeyboardButton("🔙 BACK", callback_data="BACK_HOME")])
-    return InlineKeyboardMarkup(rows)
+def admin_menu():
+    return ReplyKeyboardMarkup(
+        [
+            ["🚫 RESTRICT USER", "✅ UNRESTRICT USER"],
+            ["📋 LIST BLOCKED", "🔙 BACK"]
+        ],
+        resize_keyboard=True
+    )
 
 
 def decode_base64(data):
@@ -147,7 +115,7 @@ def decode_base64(data):
         data = data.strip().replace("\n", "").replace("\r", "").replace(" ", "")
         data += "=" * (-len(data) % 4)
         return base64.b64decode(data).decode("utf-8", errors="ignore")
-    except Exception:
+    except:
         return data
 
 
@@ -183,7 +151,7 @@ def extract_name(line, ctype):
             return f"{ctype}@{m.group(1)[:30]}"
 
         return ctype
-    except Exception:
+    except:
         return ctype
 
 
@@ -212,7 +180,7 @@ async def fetch_url_text(url):
         r = await asyncio.to_thread(get)
         if r.status_code == 200:
             return r.text.strip()
-    except Exception:
+    except:
         return None
     return None
 
@@ -259,146 +227,39 @@ async def strong_join_check(user_id, context):
     try:
         member = await context.bot.get_chat_member(CHANNEL_ID, user_id)
         return member.status in ["member", "administrator", "creator"]
-    except Exception:
+    except:
         return False
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-
-    if user_id in RESTRICTED_USERS:
-        await update.message.reply_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n┃    ACCESS DENIED   ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\nContact: @{OWNER_USERNAME}",
-            reply_markup=reply_menu_keyboard(),
-        )
-        return
-
-    if not await strong_join_check(user_id, context):
-        await update.message.reply_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n┃    JOIN REQUIRED   ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\nChannel: {CHANNEL_ID}\nJoin first, then send /start",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📢 JOIN CHANNEL", url=CHANNEL_LINK)]]),
-            disable_web_page_preview=True,
-        )
-        return
+    context.user_data["menu"] = "main"
 
     await update.message.reply_text(
         f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
         f"┃    V2RAY PRO BOT   ┃\n"
         f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-        f"Status  : Online\n"
-        f"Sources : {len(LINKS)}\n"
-        f"Mode    : Grid Menu + Copy Button\n\n"
-        f"Typing box ke upar menu button use karo.",
-        reply_markup=reply_menu_keyboard(),
-    )
-
-    await update.message.reply_text(
-        "Inline menu bhi use kar sakte ho:",
-        reply_markup=main_menu_keyboard(),
+        f"Status : Online\n"
+        f"Mode   : Reply Keyboard Menu\n\n"
+        f"Typing box ke upar button select karo.",
+        reply_markup=main_menu()
     )
 
 
-async def show_admin_panel_message(update: Update):
-    text = (
-        "┏━━━━━━━━━━━━━━━━━━━━┓\n"
-        "┃     ADMIN PANEL    ┃\n"
-        "┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-        f"Owner   : @{OWNER_USERNAME}\n"
-        f"Blocked : {len(RESTRICTED_USERS)}\n\n"
-    )
-
-    if RESTRICTED_USERS:
-        for uid in sorted(RESTRICTED_USERS):
-            text += f"• <code>{uid}</code>\n"
-    else:
-        text += "No restricted users"
-
-    await update.message.reply_text(
-        text,
-        parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🚫 RESTRICT USER", callback_data="RESTRICT_SHOW")],
-            [InlineKeyboardButton("✅ UNRESTRICT USER", callback_data="UNRESTRICT_SHOW")],
-            [InlineKeyboardButton("🔙 BACK", callback_data="BACK_HOME")],
-        ])
-    )
-
-
-async def show_admin_panel(query):
-    text = (
-        "┏━━━━━━━━━━━━━━━━━━━━┓\n"
-        "┃     ADMIN PANEL    ┃\n"
-        "┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-        f"Owner   : @{OWNER_USERNAME}\n"
-        f"Blocked : {len(RESTRICTED_USERS)}\n\n"
-    )
-
-    if RESTRICTED_USERS:
-        for uid in sorted(RESTRICTED_USERS):
-            text += f"• <code>{uid}</code>\n"
-    else:
-        text += "No restricted users"
-
-    await query.edit_message_text(
-        text,
-        parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🚫 RESTRICT USER", callback_data="RESTRICT_SHOW")],
-            [InlineKeyboardButton("✅ UNRESTRICT USER", callback_data="UNRESTRICT_SHOW")],
-            [InlineKeyboardButton("🔙 BACK", callback_data="BACK_HOME")],
-        ])
-    )
-
-
-async def handle_admin_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def send_accounts(update: Update, context: ContextTypes.DEFAULT_TYPE, country):
     user_id = update.effective_user.id
-    if not is_admin(user_id):
-        return False
-
-    action = context.user_data.get("admin_action")
-    if not action:
-        return False
-
-    try:
-        target_id = int(update.message.text.strip())
-
-        if action == "restrict":
-            RESTRICTED_USERS.add(target_id)
-            save_restricted()
-            await update.message.reply_text(f"User restricted: <code>{target_id}</code>", parse_mode=ParseMode.HTML)
-
-        elif action == "unrestrict":
-            RESTRICTED_USERS.discard(target_id)
-            save_restricted()
-            await update.message.reply_text(f"User unrestricted: <code>{target_id}</code>", parse_mode=ParseMode.HTML)
-
-        context.user_data["admin_action"] = None
-        return True
-
-    except Exception:
-        await update.message.reply_text("Invalid ID. Example: 123456789")
-        return True
-
-
-async def select_country_and_send(update: Update, context: ContextTypes.DEFAULT_TYPE, country):
-    query = update.callback_query
     config_type = context.user_data.get("type", "VMESS")
 
-    msg = await query.edit_message_text(
-        f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
-        f"┃     UPLOADING      ┃\n"
-        f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-        f"Type   : {config_type}\n"
-        f"Region : {country}\n\n"
-        f"▰▱▱▱▱▱▱▱▱▱ 10%\n"
-        f"Collecting accounts..."
-    )
+    if user_id in RESTRICTED_USERS:
+        await update.message.reply_text("Access denied.", reply_markup=main_menu())
+        return
 
-    await send_accounts_common(update, context, msg, config_type, country)
-
-
-async def select_country_and_send_from_text(update: Update, context: ContextTypes.DEFAULT_TYPE, country):
-    config_type = context.user_data.get("type", "VMESS")
+    if not await strong_join_check(user_id, context):
+        await update.message.reply_text(
+            f"Join channel first:\n{CHANNEL_LINK}\n\nJoin ke baad /start send karo.",
+            reply_markup=main_menu(),
+            disable_web_page_preview=True
+        )
+        return
 
     msg = await update.message.reply_text(
         f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
@@ -410,18 +271,12 @@ async def select_country_and_send_from_text(update: Update, context: ContextType
         f"Collecting accounts..."
     )
 
-    await send_accounts_common(update, context, msg, config_type, country)
-
-
-async def send_accounts_common(update, context, msg, config_type, country):
     try:
         await asyncio.sleep(0.4)
         await msg.edit_text(
             f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
             f"┃     UPLOADING      ┃\n"
             f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-            f"Type   : {config_type}\n"
-            f"Region : {country}\n\n"
             f"▰▰▰▱▱▱▱▱▱▱ 35%\n"
             f"Checking sources..."
         )
@@ -433,8 +288,6 @@ async def send_accounts_common(update, context, msg, config_type, country):
             f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
             f"┃     UPLOADING      ┃\n"
             f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-            f"Type   : {config_type}\n"
-            f"Region : {country}\n\n"
             f"▰▰▰▰▰▰▱▱▱▱ 65%\n"
             f"Filtering accounts..."
         )
@@ -445,13 +298,7 @@ async def send_accounts_common(update, context, msg, config_type, country):
             filtered = [c for c in filtered if c["code"] == country]
 
         if not filtered:
-            await msg.edit_text(
-                f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
-                f"┃      NOT FOUND     ┃\n"
-                f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-                f"No {config_type} account found for {country}.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK MENU", callback_data="BACK_HOME")]])
-            )
+            await msg.edit_text(f"No {config_type} account found for {country}.")
             return
 
         await asyncio.sleep(0.4)
@@ -462,10 +309,10 @@ async def send_accounts_common(update, context, msg, config_type, country):
             f"Total  : {len(filtered)}\n"
             f"Type   : {config_type}\n"
             f"Region : {country}\n\n"
-            f"Sending accounts with copy button..."
+            f"Sending accounts..."
         )
 
-        max_send = min(len(filtered), 30)
+        max_send = min(len(filtered), 25)
 
         for i, cfg in enumerate(filtered[:max_send], start=1):
             safe_name = html.escape(cfg["name"][:40])
@@ -478,200 +325,138 @@ async def send_accounts_common(update, context, msg, config_type, country):
                 f"ID     : #{i}\n"
                 f"Name   : {safe_name}\n"
                 f"Region : {country}\n\n"
-                f"<code>{safe_raw}</code>"
+                f"<code>{safe_raw}</code>\n\n"
+                f"Copy: config par tap/hold karo."
             )
 
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("📋 COPY ACCOUNT", copy_text=CopyTextButton(text=cfg["raw"]))],
-                [InlineKeyboardButton("🔙 BACK MENU", callback_data="BACK_HOME")]
-            ])
-
-            await update.effective_chat.send_message(
+            await update.message.reply_text(
                 text,
                 parse_mode=ParseMode.HTML,
-                reply_markup=keyboard,
-                disable_web_page_preview=True
+                disable_web_page_preview=True,
+                reply_markup=main_menu()
             )
 
             await asyncio.sleep(0.2)
 
-        done_text = (
-            f"━━━━━━━━━━━━━━━━━━━━\n"
-            f"✅ Done: {max_send} accounts sent\n"
-            f"Type: {config_type}\n"
-            f"Channel: {CHANNEL_ID}"
-        )
-
-        if len(filtered) > max_send:
-            done_text += f"\n\nExtra {len(filtered) - max_send} accounts hidden to avoid Telegram spam."
-
-        await update.effective_chat.send_message(
-            done_text,
-            reply_markup=reply_menu_keyboard()
+        await update.message.reply_text(
+            f"✅ Done: {max_send} accounts sent\nType: {config_type}",
+            reply_markup=main_menu()
         )
 
     except Exception as e:
-        await msg.edit_text(
-            f"Error:\n<code>{html.escape(str(e)[:300])}</code>",
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK MENU", callback_data="BACK_HOME")]])
-        )
+        await msg.edit_text(f"Error:\n<code>{html.escape(str(e)[:300])}</code>", parse_mode=ParseMode.HTML)
 
 
-async def handle_menu_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text.strip()
 
-    handled_admin = await handle_admin_text(update, context)
-    if handled_admin:
-        return
-
-    if user_id in RESTRICTED_USERS:
-        await update.message.reply_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n┃    ACCESS DENIED   ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\nContact: @{OWNER_USERNAME}",
-            reply_markup=reply_menu_keyboard(),
-        )
-        return
-
-    if not await strong_join_check(user_id, context):
-        await update.message.reply_text(
-            f"Join channel first: {CHANNEL_LINK}\nThen send /start",
-            reply_markup=reply_menu_keyboard(),
-            disable_web_page_preview=True,
-        )
-        return
-
     if text == "🔄 START":
+        await start(update, context)
+        return
+
+    if text == "🔙 BACK":
+        context.user_data["menu"] = "main"
+        await update.message.reply_text("Main menu:", reply_markup=main_menu())
+        return
+
+    if text == "ℹ️ ABOUT":
         await update.message.reply_text(
-            "Menu opened.",
-            reply_markup=reply_menu_keyboard()
+            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+            f"┃       ABOUT        ┃\n"
+            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+            f"Owner   : @{OWNER_USERNAME}\n"
+            f"Channel : {CHANNEL_ID}",
+            reply_markup=main_menu()
         )
-        await update.message.reply_text(
-            "Select account type:",
-            reply_markup=main_menu_keyboard()
-        )
+        return
+
+    if text == "⚙️ ADMIN":
+        if not is_admin(user_id):
+            await update.message.reply_text("Only admin can use this.", reply_markup=main_menu())
+            return
+
+        context.user_data["menu"] = "admin"
+        await update.message.reply_text("Admin Menu:", reply_markup=admin_menu())
+        return
+
+    if text == "🚫 RESTRICT USER":
+        if is_admin(user_id):
+            context.user_data["admin_action"] = "restrict"
+            await update.message.reply_text("User ID send karo:", reply_markup=admin_menu())
+        return
+
+    if text == "✅ UNRESTRICT USER":
+        if is_admin(user_id):
+            context.user_data["admin_action"] = "unrestrict"
+            await update.message.reply_text("User ID send karo:", reply_markup=admin_menu())
+        return
+
+    if text == "📋 LIST BLOCKED":
+        if is_admin(user_id):
+            if RESTRICTED_USERS:
+                data = "\n".join([str(x) for x in RESTRICTED_USERS])
+            else:
+                data = "No blocked users"
+            await update.message.reply_text(data, reply_markup=admin_menu())
+        return
+
+    action = context.user_data.get("admin_action")
+    if action and is_admin(user_id):
+        try:
+            target = int(text)
+            if action == "restrict":
+                RESTRICTED_USERS.add(target)
+                save_restricted()
+                await update.message.reply_text(f"Restricted: {target}", reply_markup=admin_menu())
+            elif action == "unrestrict":
+                RESTRICTED_USERS.discard(target)
+                save_restricted()
+                await update.message.reply_text(f"Unrestricted: {target}", reply_markup=admin_menu())
+
+            context.user_data["admin_action"] = None
+        except:
+            await update.message.reply_text("Invalid ID.", reply_markup=admin_menu())
         return
 
     if text == "◇ VMESS":
         context.user_data["type"] = "VMESS"
-    elif text == "◆ VLESS":
+        await update.message.reply_text("Region select karo:", reply_markup=region_menu())
+        return
+
+    if text == "◆ VLESS":
         context.user_data["type"] = "VLESS"
-    elif text == "◈ TROJAN":
+        await update.message.reply_text("Region select karo:", reply_markup=region_menu())
+        return
+
+    if text == "◈ TROJAN":
         context.user_data["type"] = "TROJAN"
-    elif text == "◉ SS":
+        await update.message.reply_text("Region select karo:", reply_markup=region_menu())
+        return
+
+    if text == "◉ SS":
         context.user_data["type"] = "SS"
-    elif text == "🌍 ALL":
-        await select_country_and_send_from_text(update, context, "ALL")
-        return
-    elif text == "ℹ️ ABOUT":
-        await update.message.reply_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
-            f"┃       ABOUT        ┃\n"
-            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-            f"Owner   : @{OWNER_USERNAME}\n"
-            f"Channel : {CHANNEL_ID}\n"
-            f"Mode    : Grid Menu + Copy Button",
-            reply_markup=reply_menu_keyboard(),
-        )
-        return
-    elif text == "⚙️ ADMIN":
-        if is_admin(user_id):
-            await show_admin_panel_message(update)
-        else:
-            await update.message.reply_text("Only admin can use this.")
-        return
-    else:
-        await update.message.reply_text(
-            "Menu button use karo ya /start send karo.",
-            reply_markup=reply_menu_keyboard()
-        )
+        await update.message.reply_text("Region select karo:", reply_markup=region_menu())
         return
 
-    await update.message.reply_text(
-        f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
-        f"┃    SELECT REGION   ┃\n"
-        f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-        f"Type: {context.user_data['type']}\n\n"
-        f"Choose region:",
-        reply_markup=country_keyboard()
-    )
+    country_map = {
+        "🇮🇳 IN": "IN",
+        "🇺🇸 US": "US",
+        "🇬🇧 GB": "GB",
+        "🇩🇪 DE": "DE",
+        "🇸🇬 SG": "SG",
+        "🇯🇵 JP": "JP",
+        "🇨🇦 CA": "CA",
+        "🇳🇱 NL": "NL",
+        "🇫🇷 FR": "FR",
+        "🌍 ALL": "ALL",
+    }
 
-
-async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user_id = update.effective_user.id
-    data = query.data
-
-    await query.answer()
-
-    if user_id in RESTRICTED_USERS:
-        await query.answer("Access blocked", show_alert=True)
+    if text in country_map:
+        await send_accounts(update, context, country_map[text])
         return
 
-    if data != "ADMIN_PANEL" and not await strong_join_check(user_id, context):
-        await query.answer("Join channel first", show_alert=True)
-        return
-
-    if data == "BACK_HOME":
-        await query.edit_message_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
-            f"┃    V2RAY PRO BOT   ┃\n"
-            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-            f"Select Account Type:",
-            reply_markup=main_menu_keyboard(),
-        )
-        return
-
-    if data == "ABOUT":
-        await query.edit_message_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
-            f"┃       ABOUT        ┃\n"
-            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-            f"Owner   : @{OWNER_USERNAME}\n"
-            f"Channel : {CHANNEL_ID}\n\n"
-            f"Mode    : V2Ray Copy Account Bot",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK", callback_data="BACK_HOME")]])
-        )
-        return
-
-    if data == "ADMIN_PANEL":
-        await show_admin_panel(query)
-        return
-
-    if data == "RESTRICT_SHOW":
-        if not is_admin(user_id):
-            await query.answer("Only admin", show_alert=True)
-            return
-        context.user_data["admin_action"] = "restrict"
-        await query.edit_message_text("Send user ID to restrict:")
-        return
-
-    if data == "UNRESTRICT_SHOW":
-        if not is_admin(user_id):
-            await query.answer("Only admin", show_alert=True)
-            return
-        context.user_data["admin_action"] = "unrestrict"
-        await query.edit_message_text("Send user ID to unrestrict:")
-        return
-
-    if data.startswith("TYPE_"):
-        config_type = data.replace("TYPE_", "")
-        context.user_data["type"] = config_type
-
-        await query.edit_message_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
-            f"┃    SELECT REGION   ┃\n"
-            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-            f"Type: {config_type}\n\n"
-            f"Choose region:",
-            reply_markup=country_keyboard()
-        )
-        return
-
-    if data.startswith("COUNTRY_"):
-        country = data.replace("COUNTRY_", "")
-        await select_country_and_send(update, context, country)
-        return
+    await update.message.reply_text("Menu button use karo.", reply_markup=main_menu())
 
 
 def main():
@@ -679,17 +464,11 @@ def main():
         print("ERROR: BOT_TOKEN set nahi hai.")
         return
 
-    print("╔══════════════════════════════════╗")
-    print("║        V2RAY PRO BOT RUNNING    ║")
-    print("║   GRID MENU | COPY BUTTON BOT   ║")
-    print("╚══════════════════════════════════╝")
+    print("V2RAY BOT RUNNING | REPLY KEYBOARD ONLY")
 
     app = Application.builder().token(TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu_text))
-    app.add_handler(CallbackQueryHandler(on_callback))
-
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.run_polling()
 
 

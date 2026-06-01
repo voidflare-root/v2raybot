@@ -8,7 +8,7 @@ import re
 import html
 import urllib.parse
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CopyTextButton
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 from telegram.constants import ParseMode
 
@@ -39,15 +39,15 @@ config_cache = []
 cache_time = 0.0
 
 COUNTRY_KEYWORDS = {
-    "IN": {"name": "INDIA", "flag": "🇮🇳", "keywords": ["india", "mumbai", "delhi", "bangalore", "chennai", "kolkata"]},
-    "US": {"name": "USA", "flag": "🇺🇸", "keywords": ["usa", "america", "new york", "los angeles", "chicago"]},
-    "GB": {"name": "UK", "flag": "🇬🇧", "keywords": ["uk", "london", "britain"]},
-    "DE": {"name": "GERMANY", "flag": "🇩🇪", "keywords": ["germany", "frankfurt", "berlin"]},
-    "SG": {"name": "SINGAPORE", "flag": "🇸🇬", "keywords": ["singapore"]},
-    "JP": {"name": "JAPAN", "flag": "🇯🇵", "keywords": ["japan", "tokyo"]},
-    "CA": {"name": "CANADA", "flag": "🇨🇦", "keywords": ["canada", "toronto"]},
-    "NL": {"name": "NETHERLANDS", "flag": "🇳🇱", "keywords": ["netherlands", "amsterdam"]},
-    "FR": {"name": "FRANCE", "flag": "🇫🇷", "keywords": ["france", "paris"]},
+    "IN": {"flag": "🇮🇳", "keywords": ["india", "mumbai", "delhi", "bangalore", "chennai", "kolkata"]},
+    "US": {"flag": "🇺🇸", "keywords": ["usa", "america", "new york", "los angeles", "chicago"]},
+    "GB": {"flag": "🇬🇧", "keywords": ["uk", "london", "britain"]},
+    "DE": {"flag": "🇩🇪", "keywords": ["germany", "frankfurt", "berlin"]},
+    "SG": {"flag": "🇸🇬", "keywords": ["singapore"]},
+    "JP": {"flag": "🇯🇵", "keywords": ["japan", "tokyo"]},
+    "CA": {"flag": "🇨🇦", "keywords": ["canada", "toronto"]},
+    "NL": {"flag": "🇳🇱", "keywords": ["netherlands", "amsterdam"]},
+    "FR": {"flag": "🇫🇷", "keywords": ["france", "paris"]},
 }
 
 PROTOCOLS = {
@@ -212,24 +212,26 @@ def main_menu_keyboard():
         [InlineKeyboardButton("◆ VLESS", callback_data="TYPE_VLESS")],
         [InlineKeyboardButton("◈ TROJAN", callback_data="TYPE_TROJAN")],
         [InlineKeyboardButton("◉ SHADOWSOCKS", callback_data="TYPE_SS")],
-        [InlineKeyboardButton("┆ ABOUT", callback_data="ABOUT")],
-        [InlineKeyboardButton("┆ ADMIN PANEL", callback_data="ADMIN_PANEL")],
+        [InlineKeyboardButton("ℹ️ ABOUT", callback_data="ABOUT")],
+        [InlineKeyboardButton("⚙️ ADMIN PANEL", callback_data="ADMIN_PANEL")],
     ])
 
 
 def country_keyboard():
     rows = []
     row = []
+
     for code, info in COUNTRY_KEYWORDS.items():
         row.append(InlineKeyboardButton(f"{info['flag']} {code}", callback_data=f"COUNTRY_{code}"))
         if len(row) == 3:
             rows.append(row)
             row = []
+
     if row:
         rows.append(row)
 
-    rows.append([InlineKeyboardButton("🌍 ALL", callback_data="COUNTRY_ALL")])
-    rows.append([InlineKeyboardButton("┆ BACK", callback_data="BACK_HOME")])
+    rows.append([InlineKeyboardButton("🌍 ALL ACCOUNTS", callback_data="COUNTRY_ALL")])
+    rows.append([InlineKeyboardButton("🔙 BACK", callback_data="BACK_HOME")])
     return InlineKeyboardMarkup(rows)
 
 
@@ -245,20 +247,31 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await strong_join_check(user_id, context):
         await update.message.reply_text(
             f"┏━━━━━━━━━━━━━━━━━━━━┓\n┃    JOIN REQUIRED   ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\nChannel: {CHANNEL_ID}\nJoin first, then send /start",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("┆ JOIN CHANNEL", url=CHANNEL_LINK)]]),
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📢 JOIN CHANNEL", url=CHANNEL_LINK)]]),
             disable_web_page_preview=True,
         )
         return
 
     await update.message.reply_text(
-        f"┏━━━━━━━━━━━━━━━━━━━━┓\n┃    V2RAY PRO BOT   ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\nStatus: Online\nSources: {len(LINKS)}\n\nSelect Config Type:",
+        f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+        f"┃    V2RAY PRO BOT   ┃\n"
+        f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+        f"Status  : Online\n"
+        f"Sources : {len(LINKS)}\n"
+        f"Mode    : Copy Button\n\n"
+        f"Select Account Type:",
         reply_markup=main_menu_keyboard(),
     )
 
 
 async def show_admin_panel(query):
-    text = "┏━━━━━━━━━━━━━━━━━━━━┓\n┃     ADMIN PANEL    ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
-    text += f"Owner: @{OWNER_USERNAME}\nBlocked: {len(RESTRICTED_USERS)}\n\n"
+    text = (
+        "┏━━━━━━━━━━━━━━━━━━━━┓\n"
+        "┃     ADMIN PANEL    ┃\n"
+        "┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+        f"Owner   : @{OWNER_USERNAME}\n"
+        f"Blocked : {len(RESTRICTED_USERS)}\n\n"
+    )
 
     if RESTRICTED_USERS:
         for uid in sorted(RESTRICTED_USERS):
@@ -270,9 +283,9 @@ async def show_admin_panel(query):
         text,
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("┆ RESTRICT USER", callback_data="RESTRICT_SHOW")],
-            [InlineKeyboardButton("┆ UNRESTRICT USER", callback_data="UNRESTRICT_SHOW")],
-            [InlineKeyboardButton("┆ BACK", callback_data="BACK_HOME")],
+            [InlineKeyboardButton("🚫 RESTRICT USER", callback_data="RESTRICT_SHOW")],
+            [InlineKeyboardButton("✅ UNRESTRICT USER", callback_data="UNRESTRICT_SHOW")],
+            [InlineKeyboardButton("🔙 BACK", callback_data="BACK_HOME")],
         ])
     )
 
@@ -310,40 +323,117 @@ async def select_country_and_send(update: Update, context: ContextTypes.DEFAULT_
     config_type = context.user_data.get("type", "VMESS")
 
     msg = await query.edit_message_text(
-        f"┏━━━━━━━━━━━━━━━━━━━━┓\n┃     PROCESSING     ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\nType: {config_type}\nRegion: {country}\nPlease wait..."
+        f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+        f"┃     UPLOADING      ┃\n"
+        f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+        f"Type   : {config_type}\n"
+        f"Region : {country}\n\n"
+        f"▰▱▱▱▱▱▱▱▱▱ 10%\n"
+        f"Collecting accounts..."
     )
 
     try:
+        await asyncio.sleep(0.4)
+        await msg.edit_text(
+            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+            f"┃     UPLOADING      ┃\n"
+            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+            f"Type   : {config_type}\n"
+            f"Region : {country}\n\n"
+            f"▰▰▰▱▱▱▱▱▱▱ 35%\n"
+            f"Checking sources..."
+        )
+
         all_configs = await fetch_configs()
 
+        await asyncio.sleep(0.4)
+        await msg.edit_text(
+            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+            f"┃     UPLOADING      ┃\n"
+            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+            f"Type   : {config_type}\n"
+            f"Region : {country}\n\n"
+            f"▰▰▰▰▰▰▱▱▱▱ 65%\n"
+            f"Filtering accounts..."
+        )
+
         filtered = [c for c in all_configs if c["type"] == config_type]
+
         if country != "ALL":
             filtered = [c for c in filtered if c["code"] == country]
 
         if not filtered:
-            await msg.edit_text(f"No {config_type} configs found for {country}.")
+            await msg.edit_text(
+                f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+                f"┃      NOT FOUND     ┃\n"
+                f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+                f"No {config_type} account found for {country}.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK MENU", callback_data="BACK_HOME")]])
+            )
             return
 
-        file_name = f"{config_type}_{country}_configs.txt"
-        with open(file_name, "w", encoding="utf-8") as f:
-            for i, cfg in enumerate(filtered, 1):
-                f.write(f"# {i} {cfg['type']} {cfg['flag']} {cfg['name']}\n")
-                f.write(cfg["raw"] + "\n\n")
-
+        await asyncio.sleep(0.4)
         await msg.edit_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n┃    CONFIGS FOUND   ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\nTotal: {len(filtered)}\nType: {config_type}\nRegion: {country}\n\nSending file..."
+            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+            f"┃    ACCOUNTS FOUND  ┃\n"
+            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+            f"Total  : {len(filtered)}\n"
+            f"Type   : {config_type}\n"
+            f"Region : {country}\n\n"
+            f"Sending accounts with copy button..."
         )
 
-        await update.effective_chat.send_document(
-            document=open(file_name, "rb"),
-            filename=file_name,
-            caption=f"{config_type} {country} configs\nTotal: {len(filtered)}\nChannel: {CHANNEL_ID}"
+        max_send = min(len(filtered), 30)
+
+        for i, cfg in enumerate(filtered[:max_send], start=1):
+            safe_name = html.escape(cfg["name"][:40])
+            safe_raw = html.escape(cfg["raw"])
+
+            text = (
+                f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+                f"┃ {cfg['symbol']} {cfg['type']} ACCOUNT {cfg['flag']}\n"
+                f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+                f"ID     : #{i}\n"
+                f"Name   : {safe_name}\n"
+                f"Region : {country}\n\n"
+                f"<code>{safe_raw}</code>"
+            )
+
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("📋 COPY ACCOUNT", copy_text=CopyTextButton(text=cfg["raw"]))],
+                [InlineKeyboardButton("🔙 BACK MENU", callback_data="BACK_HOME")]
+            ])
+
+            await update.effective_chat.send_message(
+                text,
+                parse_mode=ParseMode.HTML,
+                reply_markup=keyboard,
+                disable_web_page_preview=True
+            )
+
+            await asyncio.sleep(0.2)
+
+        done_text = (
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"✅ Done: {max_send} accounts sent\n"
+            f"Type: {config_type}\n"
+            f"Channel: {CHANNEL_ID}"
         )
 
-        os.remove(file_name)
+        if len(filtered) > max_send:
+            done_text += f"\n\nExtra {len(filtered) - max_send} accounts hidden to avoid Telegram spam."
+
+        await update.effective_chat.send_message(
+            done_text,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK MENU", callback_data="BACK_HOME")]])
+        )
 
     except Exception as e:
-        await msg.edit_text(f"Error:\n<code>{html.escape(str(e)[:300])}</code>", parse_mode=ParseMode.HTML)
+        await msg.edit_text(
+            f"Error:\n<code>{html.escape(str(e)[:300])}</code>",
+            parse_mode=ParseMode.HTML,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK MENU", callback_data="BACK_HOME")]])
+        )
 
 
 async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -363,15 +453,23 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data == "BACK_HOME":
         await query.edit_message_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n┃    V2RAY PRO BOT   ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\nSelect Config Type:",
+            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+            f"┃    V2RAY PRO BOT   ┃\n"
+            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+            f"Select Account Type:",
             reply_markup=main_menu_keyboard(),
         )
         return
 
     if data == "ABOUT":
         await query.edit_message_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n┃       ABOUT        ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\nOwner: @{OWNER_USERNAME}\nChannel: {CHANNEL_ID}",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("┆ BACK", callback_data="BACK_HOME")]])
+            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+            f"┃       ABOUT        ┃\n"
+            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+            f"Owner   : @{OWNER_USERNAME}\n"
+            f"Channel : {CHANNEL_ID}\n\n"
+            f"Mode    : V2Ray Copy Account Bot",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 BACK", callback_data="BACK_HOME")]])
         )
         return
 
@@ -398,8 +496,13 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data.startswith("TYPE_"):
         config_type = data.replace("TYPE_", "")
         context.user_data["type"] = config_type
+
         await query.edit_message_text(
-            f"┏━━━━━━━━━━━━━━━━━━━━┓\n┃    SELECT REGION   ┃\n┗━━━━━━━━━━━━━━━━━━━━┛\n\nType: {config_type}",
+            f"┏━━━━━━━━━━━━━━━━━━━━┓\n"
+            f"┃    SELECT REGION   ┃\n"
+            f"┗━━━━━━━━━━━━━━━━━━━━┛\n\n"
+            f"Type: {config_type}\n\n"
+            f"Choose region:",
             reply_markup=country_keyboard()
         )
         return
@@ -411,11 +514,15 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-    if TOKEN == "BOT_TOKEN_HERE" or TOKEN == "BOT_TOKEN":
+    if TOKEN in ["BOT_TOKEN_HERE", "BOT_TOKEN", ""]:
         print("ERROR: BOT_TOKEN set nahi hai.")
         return
 
-    print("V2RAY PRO BOT RUNNING...")
+    print("╔══════════════════════════════════╗")
+    print("║        V2RAY PRO BOT RUNNING    ║")
+    print("║     COPY BUTTON | MENU BOX      ║")
+    print("╚══════════════════════════════════╝")
+
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
